@@ -20,19 +20,25 @@ namespace MultiDataSyncProMax.Services.Implementation
 
         public async Task SendAsync(string endpoint, object payload)
         {
-            await ErrorMiddleware.ExecuteWithHandling(async () =>
-            {
-                var client = _clientFactory.CreateClient("DataSync");
-                var content = new StringContent(
-                    JsonSerializer.Serialize(payload),
-                    Encoding.UTF8,
-                    "application/json");
+            var client = _clientFactory.CreateClient("DataSync");
 
-                var response = await client.PostAsync(endpoint, content);
-                response.EnsureSuccessStatusCode();
+            object json = payload is string s
+                ? JsonDocument.Parse(s).RootElement
+                : payload;
 
-                Console.WriteLine($"📤 Sent successfully to {endpoint}");
-            });
+            var jsonString = JsonSerializer.Serialize(json);
+
+            var content = new StringContent(
+                jsonString,
+                Encoding.UTF8,
+                "application/json");
+
+            Console.WriteLine("Outgoing Payload:\n" + JsonSerializer.Serialize(json, new JsonSerializerOptions { WriteIndented = true }));
+
+            var response = await client.PostAsync(endpoint, content);
+            response.EnsureSuccessStatusCode();
+
+            Console.WriteLine($"📤 Sent successfully to {endpoint}");
         }
     }
 }

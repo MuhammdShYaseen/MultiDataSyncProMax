@@ -1,11 +1,6 @@
 ﻿using MultiDataSyncProMax.Configuration.Interfaces;
 using MultiDataSyncProMax.GlobalErrorHandler;
 using MultiDataSyncProMax.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MultiDataSyncProMax.Services
 {
@@ -44,42 +39,61 @@ namespace MultiDataSyncProMax.Services
                 Console.WriteLine($"🔄 Starting sync from {profile.Source.Type} to {profile.Destination.Endpoint}");
 
                 var reader = _factory.Create(profile.Source);
+
                 int processed = 0;
                 int skipped = 0;
 
+                var batch = new List<object>();
+                var pageSize = profile.Source.PageSize > 0
+                    ? profile.Source.PageSize
+                    : 30;
+
                 await foreach (var record in reader.ReadAsync(profile.Source))
                 {
-                    if (!record.TryGetValue("Id", out var id) || id == null)
-                    {
-                        Console.WriteLine($"⚠️ Record without ID skipped: {System.Text.Json.JsonSerializer.Serialize(record)}");
-                        skipped++;
-                        continue;
-                    }
-
-                    var idString = id.ToString()!;
-                    if (_state.IsProcessed(idString))
-                    {
-                        skipped++;
-                        continue;
-                    }
-
                     try
                     {
-                        var payload = _transformer.Transform(profile.Destination.PayloadTemplate, record);
-                        await _sender.SendAsync(profile.Destination.Endpoint, payload);
-                        _state.MarkProcessed(idString);
-                        processed++;
+                        var payload = _transformer.Transform(
+                            profile.Destination.PayloadTemplate,
+                            record
+                        );
 
-                        if (processed % 10 == 0)
-                            Console.WriteLine($"📊 Progress: {processed} processed, {skipped} skipped");
+                        batch.Add(payload);
+                        processed++;
                     }
                     catch (Exception ex)
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"⚠️ Failed to process record {idString}: {ex.Message}");
+                        Console.WriteLine($"⚠️ Failed to transform record: {ex.Message}");
                         Console.ResetColor();
-                        // Continue with next record
                     }
+                }
+
+                // ===============================
+                // إرسال البيانات على صفحات
+                // ===============================
+                if (batch.Count == 0)
+                {
+                    Console.WriteLine("⚠️ No data to send.");
+                    return;
+                }
+
+                Console.WriteLine($"📦 Sending {batch.Count} records in pages of {pageSize}");
+
+                int pageNumber = 1;
+
+                foreach (var page in batch.Chunk(pageSize))
+                {
+                    Console.WriteLine($"📤 Sending page {pageNumber} ({page.Length} records)");
+
+                    await _sender.SendAsync(
+                        profile.Destination.Endpoint,
+                        page.ToList()
+                    );
+
+                    pageNumber++;
+
+                    // تأخير بسيط لتخفيف الضغط على السيرفر
+                    await Task.Delay(200);
                 }
 
                 Console.ForegroundColor = ConsoleColor.Green;

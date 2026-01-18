@@ -10,5 +10,7 @@ namespace MultiDataSyncProMax.Configuration.ProfilesModels
     {
         public SourceConfig Source { get; set; } = new();
         public DestinationConfig Destination { get; set; } = new();
+
+
     }
 }

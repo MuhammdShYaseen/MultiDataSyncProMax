@@ -35,6 +35,8 @@ namespace MultiDataSyncProMax.Services.Implementation
                     {
                         if (element.TryGetProperty(map.Value, out var prop))
                             record[map.Key] = prop.ToString();
+                        Console.WriteLine($"Key {map.Key} value {map.Value}");
+                        
                     }
                     yield return record;
                 }

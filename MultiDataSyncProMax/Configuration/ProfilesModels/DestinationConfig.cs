@@ -9,6 +9,8 @@ namespace MultiDataSyncProMax.Configuration.ProfilesModels
     public class DestinationConfig
     {
         public string Endpoint { get; set; } = string.Empty;
-        public object PayloadTemplate { get; set; } = new();
+        public string PayloadTemplate { get; set; } = string.Empty;
+
+        //public int PageSize { get; set; }
     }
 }
