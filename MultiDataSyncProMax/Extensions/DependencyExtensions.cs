@@ -18,7 +18,6 @@ namespace MultiDataSyncProMax.Extensions
             services.AddSingleton<IPayloadTransformer, PayloadTransformer>();
             services.AddSingleton<IDataSender, HttpDataSender>();
             services.AddSingleton<IStateStore, FileStateStore>();
-            services.AddTransient<DataSyncService>();
             services.AddSingleton<AppRunner>();
 
             // Add HttpClient with retry policy
